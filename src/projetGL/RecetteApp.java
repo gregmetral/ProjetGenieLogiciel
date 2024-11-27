@@ -7,54 +7,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 
-class Article {
-    private String code;
-    private String nom;
-    private double prix;
-    private String source;
-
-    public Article(String code, String nom, double prix, String source) {
-        this.code = code;
-        this.nom = nom;
-        this.prix = prix;
-        this.source = source;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getNom() {
-        return nom;
-    }
-
-    public double getPrix() {
-        return prix;
-    }
-
-    public String getSource() {
-        return source;
-    }
-
-    @Override
-    public String toString() {
-        return nom + " (" + code + ")";
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        Article article = (Article) obj;
-        return code.equals(article.code);
-    }
-
-    @Override
-    public int hashCode() {
-        return code.hashCode();
-    }
-}
-
 public class RecetteApp extends JFrame {
     private JComboBox<String> categorieComboBox;
     private JPanel articlesPanel;
@@ -62,10 +14,11 @@ public class RecetteApp extends JFrame {
     private JTextArea resumeTextArea;
     private JButton addButton;
 
+
     private List<Article> articles = new ArrayList<>();
     private Map<String, List<Article>> selectionsParCategorie = new HashMap<>();
     private Map<String, Double> montantTotalParCategorie = new HashMap<>();
-    private Map<String, Set<String>> articlesUtilisesParCategorie = new HashMap<>();
+    private Map<String, Set<Article>> articlesUtilisesParCategorie = new HashMap<>();
 
     public RecetteApp() {
         articles.add(new Article("S1A1", "Chambre Île-du-Prince-Édouard", 50, "Hôtel"));
@@ -129,7 +82,7 @@ public class RecetteApp extends JFrame {
         }
 
         List<Article> articlesSelectionnes = selectionsParCategorie.get(categorie);
-        Set<String> articlesUtilises = articlesUtilisesParCategorie.get(categorie);
+        Set<Article> articlesUtilises = articlesUtilisesParCategorie.get(categorie);
 
         for (Article article : articles) {
             if (article.getSource().equalsIgnoreCase(categorie)) {
@@ -138,13 +91,18 @@ public class RecetteApp extends JFrame {
                 JCheckBox checkBox = new JCheckBox(article.toString());
                 checkBox.putClientProperty("article", article);
 
-                if (articlesUtilises.contains(article.getCode())) {
+                if (articlesUtilises.contains(article)) {
                     checkBox.setSelected(true);
                     checkBox.setEnabled(false);
 
+                    JButton modifierButton = new JButton("Modifier");
+                    modifierButton.addActionListener(e -> modifierPrix(categorie, article));
+
                     JButton annulerButton = new JButton("Annuler");
                     annulerButton.addActionListener(e -> annulerRecette());
+
                     articlePanel.add(checkBox);
+                    articlePanel.add(modifierButton);
                     articlePanel.add(annulerButton);
                 } else {
                     checkBox.setSelected(articlesSelectionnes.contains(article));
@@ -167,16 +125,33 @@ public class RecetteApp extends JFrame {
         articlesPanel.repaint();
     }
 
+    private void modifierPrix(String categorie, Article article) {
+        String nouveauPrix = JOptionPane.showInputDialog(this, 
+                "Entrez le nouveau prix pour : " + article.getNom(), 
+                article.getPrix());
+        if (nouveauPrix != null) {
+            try {
+                //
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(this, "Prix invalide! Veuillez entrer un nombre.", "Erreur", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+    
+    private void annulerRecette() {
+    	//
+    }
+
     private void ajouterRecette() {
         String categorie = (String) categorieComboBox.getSelectedItem();
         List<Article> articlesSelectionnes = selectionsParCategorie.get(categorie);
-        Set<String> articlesUtilises = articlesUtilisesParCategorie.get(categorie);
+        Set<Article> articlesUtilises = articlesUtilisesParCategorie.get(categorie);
 
         double montantTotal = 0.0;
 
         for (Article article : articlesSelectionnes) {
             montantTotal += article.getPrix();
-            articlesUtilises.add(article.getCode()); 
+            articlesUtilises.add(article); 
         }
 
         if (categorie.equals("WC") || categorie.equals("Douche")) {
@@ -196,10 +171,6 @@ public class RecetteApp extends JFrame {
         selectionsParCategorie.put(categorie, new ArrayList<>());
         afficherArticles();
     }
-    
-    private void annulerRecette() {
-    	System.out.println("Test");
-    }
 
     private void mettreAJourResume() {
         StringBuilder resume = new StringBuilder("Résumé des recettes :\n");
@@ -208,6 +179,7 @@ public class RecetteApp extends JFrame {
         }
         resumeTextArea.setText(resume.toString());
     }
+
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(RecetteApp::new);
