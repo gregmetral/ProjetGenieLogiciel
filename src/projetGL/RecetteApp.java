@@ -59,13 +59,13 @@ public class RecetteApp extends JFrame {
     private JComboBox<String> categorieComboBox;
     private JPanel articlesPanel;
     private JTextField montantGlobalField;
-    private JTextArea recettesTextArea;
+    private JTextArea resumeTextArea;
     private JButton addButton;
 
     private List<Article> articles = new ArrayList<>();
     private Map<String, List<Article>> selectionsParCategorie = new HashMap<>();
-    private Map<String, Double> montantGlobalParCategorie = new HashMap<>();
-    private List<String> recettes = new ArrayList<>();
+    private Map<String, Double> montantTotalParCategorie = new HashMap<>();
+    private Map<String, Set<String>> articlesUtilisesParCategorie = new HashMap<>();
 
     public RecetteApp() {
         articles.add(new Article("S1A1", "Chambre Île-du-Prince-Édouard", 50, "Hôtel"));
@@ -82,8 +82,14 @@ public class RecetteApp extends JFrame {
         articles.add(new Article("S3A2", "Espace Québec City", 80, "Espace"));
         articles.add(new Article("S3A3", "Espace Ottawa", 80, "Espace"));
 
+        for (String categorie : new String[]{"Hôtel", "Magasin", "Espace", "WC", "Douche"}) {
+            selectionsParCategorie.put(categorie, new ArrayList<>());
+            montantTotalParCategorie.put(categorie, 0.0);
+            articlesUtilisesParCategorie.put(categorie, new HashSet<>());
+        }
+
         setTitle("Gestion des Recettes");
-        setSize(600, 500);
+        setSize(900, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         categorieComboBox = new JComboBox<>(new String[]{"Hôtel", "Magasin", "Espace", "WC", "Douche"});
@@ -92,18 +98,19 @@ public class RecetteApp extends JFrame {
 
         articlesPanel = new JPanel();
         articlesPanel.setLayout(new BoxLayout(articlesPanel, BoxLayout.Y_AXIS));
-        JScrollPane scrollPane = new JScrollPane(articlesPanel);
-        add(scrollPane, BorderLayout.CENTER);
+        JScrollPane articlesScrollPane = new JScrollPane(articlesPanel);
+        add(articlesScrollPane, BorderLayout.CENTER);
 
-        recettesTextArea = new JTextArea(5, 30);
-        recettesTextArea.setEditable(false);
-        add(new JScrollPane(recettesTextArea), BorderLayout.EAST);
+        resumeTextArea = new JTextArea(10, 20);
+        resumeTextArea.setEditable(false);
+        add(new JScrollPane(resumeTextArea), BorderLayout.EAST);
 
         addButton = new JButton("Ajouter Recette");
         addButton.addActionListener(e -> ajouterRecette());
         add(addButton, BorderLayout.SOUTH);
 
         afficherArticles();
+        mettreAJourResume();
         setVisible(true);
     }
 
@@ -121,24 +128,38 @@ public class RecetteApp extends JFrame {
             articlesPanel.add(montantPanel);
         }
 
-        List<Article> articlesSelectionnes = selectionsParCategorie.getOrDefault(categorie, new ArrayList<>());
+        List<Article> articlesSelectionnes = selectionsParCategorie.get(categorie);
+        Set<String> articlesUtilises = articlesUtilisesParCategorie.get(categorie);
 
         for (Article article : articles) {
             if (article.getSource().equalsIgnoreCase(categorie)) {
+                JPanel articlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+
                 JCheckBox checkBox = new JCheckBox(article.toString());
-                checkBox.setSelected(articlesSelectionnes.contains(article));
                 checkBox.putClientProperty("article", article);
 
-                checkBox.addActionListener(e -> {
-                    if (checkBox.isSelected()) {
-                        articlesSelectionnes.add(article);
-                    } else {
-                        articlesSelectionnes.remove(article);
-                    }
-                    selectionsParCategorie.put(categorie, articlesSelectionnes);
-                });
+                if (articlesUtilises.contains(article.getCode())) {
+                    checkBox.setSelected(true);
+                    checkBox.setEnabled(false);
 
-                articlesPanel.add(checkBox);
+                    JButton annulerButton = new JButton("Annuler");
+                    annulerButton.addActionListener(e -> annulerRecette());
+                    articlePanel.add(checkBox);
+                    articlePanel.add(annulerButton);
+                } else {
+                    checkBox.setSelected(articlesSelectionnes.contains(article));
+                    checkBox.addActionListener(e -> {
+                        if (checkBox.isSelected()) {
+                            articlesSelectionnes.add(article);
+                        } else {
+                            articlesSelectionnes.remove(article);
+                        }
+                        selectionsParCategorie.put(categorie, articlesSelectionnes);
+                    });
+                    articlePanel.add(checkBox);
+                }
+
+                articlesPanel.add(articlePanel);
             }
         }
 
@@ -148,27 +169,44 @@ public class RecetteApp extends JFrame {
 
     private void ajouterRecette() {
         String categorie = (String) categorieComboBox.getSelectedItem();
-        List<Article> articlesSelectionnes = selectionsParCategorie.getOrDefault(categorie, new ArrayList<>());
+        List<Article> articlesSelectionnes = selectionsParCategorie.get(categorie);
+        Set<String> articlesUtilises = articlesUtilisesParCategorie.get(categorie);
 
-        StringBuilder recetteDetails = new StringBuilder("Recette: " + categorie + "\n");
+        double montantTotal = 0.0;
 
         for (Article article : articlesSelectionnes) {
-            recetteDetails.append("- ").append(article.getNom()).append(" : ").append(article.getPrix()).append("€\n");
+            montantTotal += article.getPrix();
+            articlesUtilises.add(article.getCode()); 
         }
 
         if (categorie.equals("WC") || categorie.equals("Douche")) {
             try {
                 double montantGlobal = Double.parseDouble(montantGlobalField.getText());
-                recetteDetails.append("Montant Global : ").append(montantGlobal).append("€\n");
-                montantGlobalParCategorie.put(categorie, montantGlobal);
+                montantTotal += montantGlobal;
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Veuillez entrer un montant valide.", "Erreur", JOptionPane.ERROR_MESSAGE);
                 return;
             }
         }
 
-        recettes.add(recetteDetails.toString());
-        recettesTextArea.setText(String.join("\n", recettes));
+        montantTotalParCategorie.put(categorie, montantTotalParCategorie.get(categorie) + montantTotal);
+
+        mettreAJourResume();
+
+        selectionsParCategorie.put(categorie, new ArrayList<>());
+        afficherArticles();
+    }
+    
+    private void annulerRecette() {
+    	System.out.println("Test");
+    }
+
+    private void mettreAJourResume() {
+        StringBuilder resume = new StringBuilder("Résumé des recettes :\n");
+        for (Map.Entry<String, Double> entry : montantTotalParCategorie.entrySet()) {
+            resume.append(entry.getKey()).append(" : ").append(entry.getValue()).append("€\n");
+        }
+        resumeTextArea.setText(resume.toString());
     }
 
     public static void main(String[] args) {
