@@ -6,6 +6,6 @@ public aspect SecurityAspect {
         call(void RecetteApp.annuler*(..));
 
     after(): sensitiveActions() {
-        System.out.println("Tentative de suppression d’une recette");
+        System.out.println("Tentative de suppression ou mise à jour d’une recette");
     }
 }

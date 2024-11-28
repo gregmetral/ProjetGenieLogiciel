@@ -149,11 +149,15 @@ public class RecetteApp extends JFrame {
 
         double montantTotal = 0.0;
 
+        List<Article> recettesValidées = new ArrayList<>();
+
         for (Article article : articlesSelectionnes) {
             montantTotal += article.getPrix();
             articlesUtilises.add(article); 
-        }
 
+            Article articleAlerte = new Article(article.getCode(), article.getNom(), article.getPrix(), article.getSource());
+            recettesValidées.add(articleAlerte); 
+        }
         if (categorie.equals("WC") || categorie.equals("Douche")) {
             try {
                 double montantGlobal = Double.parseDouble(montantGlobalField.getText());
@@ -163,15 +167,20 @@ public class RecetteApp extends JFrame {
                 return;
             }
         }
-
         montantTotalParCategorie.put(categorie, montantTotalParCategorie.get(categorie) + montantTotal);
 
+        RecetteObserver observer = new RecetteObserver();
+        for (Article article : recettesValidées) {
+        	article.addObserver(observer); 
+        	article.valider();  
+        }
         mettreAJourResume();
 
         selectionsParCategorie.put(categorie, new ArrayList<>());
         afficherArticles();
     }
-
+    
+    
     private void mettreAJourResume() {
         StringBuilder resume = new StringBuilder("Résumé des recettes :\n");
         for (Map.Entry<String, Double> entry : montantTotalParCategorie.entrySet()) {

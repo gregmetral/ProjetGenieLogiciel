@@ -1,6 +1,9 @@
 package projetGL;
+import java.util.Observable;
+import java.util.Observer;
 
-public class Article {
+@SuppressWarnings("deprecation")
+public class Article extends Observable{
 	private String code;
     private String nom;
     private double prix;
@@ -11,6 +14,14 @@ public class Article {
         this.nom = nom;
         this.prix = prix;
         this.source = source;
+    }
+    
+    public void valider() {
+        System.out.println("Recette validée: " + nom + " - " + prix + "€");
+        if (source.equalsIgnoreCase("Hôtel")) {
+            setChanged(); 
+            notifyObservers(this);
+        }
     }
 
     public String getCode() {
