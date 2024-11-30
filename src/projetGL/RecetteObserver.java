@@ -16,7 +16,7 @@ public class RecetteObserver implements Observer {
         if (o instanceof Article) {
         	Article article = (Article) o;
 
-            recettesValidées.add("Recette validée pour l'hôtel: " + article.getNom() + " - " + article.getPrix() + "€");
+            recettesValidées.add("La " + article.getNom() + " est désormais disponible");
         }
         if (!recettesValidées.isEmpty()) {
             String message = String.join("\n", recettesValidées);
